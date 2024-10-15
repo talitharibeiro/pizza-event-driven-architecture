@@ -1,0 +1,40 @@
+service: pizza-event-driven-architecture
+
+
+provider:
+  name: aws
+  runtime: python3.11
+  memorySize: 128
+  region: us-east-1
+  timeout: 300
+  iam: 
+    role: !Sub "arn:aws:iam::${AWS::665732913058}:role/LabRole"
+  environment:
+    EM_PREPARACAO_QUEUE_URL: https://sqs.us-east-1.amazonaws.com/665732913058/em-preparacao-pizzaria
+    PRONTO_QUEUE_URL: https://sqs.us-east-1.amazonaws.com/665732913058/pronto-pizzaria
+    DYNAMODB_TABLE_NAME: pedidos-pizzaria
+
+functions:
+  processS3Events:
+    handler: handler.lambda_handler
+    events:
+      - s3:
+          bucket: pizzaria356959
+          event: s3:ObjectCreated:*
+          rules:
+            - prefix: em-preparacao/
+            - prefix: pronto/
+
+  processEmPreparacaoQueue:
+    handler: handler.lambda_handler_em_preparacao
+    events:
+      - sqs:
+          arn: arn:aws:sqs:us-east-1:665732913058:em-preparacao-pizzaria
+          batchSize: 1
+
+  processProntoQueue:
+    handler: handler.lambda_handler_pronto
+    events:
+      - sqs:
+          arn: arn:aws:sqs:us-east-1:665732913058:pronto-pizzaria
+          batchSize: 1
